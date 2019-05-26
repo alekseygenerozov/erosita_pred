@@ -61,7 +61,7 @@ def EE(z):
 
 def J(z):
 	ords=np.linspace(0,z,500)
-	absc=EE(ords)
+	absc=1.0/EE(ords)
 
 	return IUS(ords, absc).integral(0,z)
 
@@ -94,7 +94,7 @@ def Lo(M, *, spin=0, **kwargs):
 	return min(Ledd(M), Lo1(M, spin=spin, **kwargs))
 
 def tedd(M, q, *, spin=0, **kwargs):
-	return to1(M)*(Ledd(M)/Lo1(M))**(-1.0/q)
+	return to1(M)*(Ledd(M)/Lo1(M, spin=spin))**(-1.0/q)
 
 @np.vectorize
 def to(M, q, *, spin=0, **kwargs):
@@ -132,20 +132,20 @@ def bol_correct(spec, nu_min, nu_max):
 
 def zlim(M, q, *, spin=0, **kwargs):
 	##Should be to below???
-	ss=lambda nu: spec_disk(M, mdot(to1(M), M, q), nu, spin=spin, **kwargs)
+	ss=lambda nu: spec_disk(M, mdot(to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs)
 	return newton(lambda z1:(1.0+z1)**2.0*J(z1)**2.0*K(z1, ss)-Lo(M)*bol_correct(ss, hnu_min_ros, hnu_max_ros)/4.0/np.pi/dh**2.0/flim, 0.2)
 
 def tend(M, q, z, *, spin=0, **kwargs):
 	tt=to(M, q, spin=spin, **kwargs)
-	return brentq(lambda tx: (Lo(M, spin=spin, **kwargs)*bol_correct(lambda nu: spec_disk(M, mdot(tx*to1(M), M, q), nu, spin=spin, **kwargs), hnu_min_ros, hnu_max_ros)/\
-		(4.0*np.pi*dh**2.0*K(z, lambda nu: spec_disk(M, mdot(tx*to1(M), M, q), nu, spin=spin, **kwargs))*flim*(1+z)**2.*J(z)**2.0))\
+	return brentq(lambda tx: (Lo(M, spin=spin, **kwargs)*bol_correct(lambda nu: spec_disk(M, mdot(tx*to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs), hnu_min_ros, hnu_max_ros)/\
+		(4.0*np.pi*dh**2.0*K(z, lambda nu: spec_disk(M, mdot(tx*to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs))*flim*(1+z)**2.*J(z)**2.0))\
 	**(1.0/q)-tx, 1, 1000)*tt
 
 def ndot_tde(M):
 	return 2.9e-5/cgs.year*(M/1.0e8/cgs.M_sun)**-0.4*phi(M)
 
 def ttot(M, q, z, *, spin=0, **kwargs):
-	return tend(M, q, z, spin=spin, **kwargs)
+	return tend(M, q, z, spin=spin, **kwargs)-to(M, q, spin=spin, **kwargs)
 
 def Ntot(M, q, *, spin=0, **kwargs):
 	zlim11=zlim(M, q, spin=spin, **kwargs)
@@ -155,10 +155,13 @@ def Ntot(M, q, *, spin=0, **kwargs):
 
 
 # zords=np.linspace(0, 0.25, 100)
-Mbh=1.0e6*cgs.M_sun
-print(bol_correct(lambda nu1: spec_disk( Mbh, mdot(to1(Mbh), Mbh, 1.2), nu1), hnu_min_ros, hnu_max_ros))
+# Mbh=1.0e6*cgs.M_sun
+# print(bol_correct(lambda nu1: spec_disk( Mbh, mdot(to1(Mbh), Mbh, 1.2), nu1), hnu_min_ros, hnu_max_ros))
+# print(zlim(1.0e5*cgs.M_sun, 1.2), zlim(1.0e5*cgs.M_sun, 1.2, spin=0.95), zlim(1.0e5*cgs.M_sun, 1.2, spin=-0.95))
+# print(eta(0.95), eta(-0.95))
 
-Mbh=1.0e6*cgs.M_sun
+
+# Mbh=1.0e6*cgs.M_sun
 mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
 dat=[Ntot(mm, 1.2) for mm in mords]
 np.savetxt("spin_0_dat.csv", np.transpose([mords, dat]))
@@ -166,3 +169,7 @@ np.savetxt("spin_0_dat.csv", np.transpose([mords, dat]))
 mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
 dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
 np.savetxt("spin_0.95_dat.csv", np.transpose([mords, dat]))
+
+mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
+dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
+np.savetxt("spin_-0.95_dat.csv", np.transpose([mords, dat]))
