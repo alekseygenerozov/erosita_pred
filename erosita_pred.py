@@ -162,14 +162,14 @@ def Ntot(M, q, *, spin=0, **kwargs):
 
 
 # Mbh=1.0e6*cgs.M_sun
-mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
-dat=[Ntot(mm, 1.2) for mm in mords]
-np.savetxt("spin_0_dat.csv", np.transpose([mords, dat]))
+# mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
+# dat=[Ntot(mm, 1.2) for mm in mords]
+# np.savetxt("spin_0_dat.csv", np.transpose([mords, dat]))
 
-mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
-dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
-np.savetxt("spin_0.95_dat.csv", np.transpose([mords, dat]))
+# mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
+# dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
+# np.savetxt("spin_0.95_dat.csv", np.transpose([mords, dat]))
 
-mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
-dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
+mords=10.**np.arange(5, np.log10(Mhill(-0.95)/cgs.M_sun), 0.05)*cgs.M_sun
+dat=[Ntot(mm, 1.2, spin=-0.95) for mm in mords]
 np.savetxt("spin_-0.95_dat.csv", np.transpose([mords, dat]))
