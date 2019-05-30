@@ -4,30 +4,45 @@ import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline as IUS
 
 from scipy.optimize import newton, brentq
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import labelLine
+
+# print(mpl.matplotlib_fname())
 
 hnu_min_ros=0.2
 hnu_max_ros=2.0
 ms=cgs.M_sun
 
+##Double check dh and flim
 dh=3.0/0.7*1e9*cgs.pc
 flim=1.06e-12
 omega_m=0.3
 omega_l=0.7
 
-
+#--------------------------------------------------------------------------------------------------_#
+##Shankar mass function
 phi_dat=ascii.read("/home/aleksey/Documents/Papers/Shankar/shankar_mass_func.txt")
 phi_dat=phi_dat[phi_dat['z']==0.02]
 phi_interp=IUS(phi_dat['logM'],  phi_dat['logP'])
-
+#--------------------------------------------------------------------------------------------------_#
+##ZAMS stellar radii mist 
 loc = "/home/aleksey/software/MIST_v1.1_feh_p0.00_afe_p0.0_vvcrit0.4_EEPS/"
 rdat = np.genfromtxt(loc+"r_zams.csv", delimiter=',')
 rinterp = IUS(rdat[:,0], rdat[:,1])
-
-e_resp_dat=np.genfromtxt('/home/aleksey/Dropbox/projects/late_tdes/erosita_response.csv', delimiter=',')
-e_resp=IUS(e_resp_dat[:,0], e_resp_dat[:, 1])
+#--------------------------------------------------------------------------------------------------_#
+##eROSITA calibration
+ff=fits.open('eros_200nmAl_200nmPI_sdtq.fits')
+ff2=fits.open('eros_100nmAl_200nmPI_sdtq.fits')
+dat=ff[1].data
+ords=0.5*(dat['ENERG_LO']+dat['ENERG_HI'])
+dat2=ff2[1].data
+ords2=0.5*(dat2['ENERG_LO']+dat['ENERG_HI'])
+e_resp=IUS(ords, 5.0*dat['SPECRESP']+2.0*dat2['SPECRESP'])
+#--------------------------------------------------------------------------------------------------_#
 
 def rs(M):
-	# return rinterp(M/cgs.M_sun)*cgs.R_sun
+	#return rinterp(M/cgs.M_sun)*cgs.R_sun
 	return cgs.R_sun
 
 def phi(M):
@@ -86,6 +101,7 @@ def to1(M):
 def mdot(t, M, q):
 	return ms/2/to1(M)*(q-1.0)*(t/to1(M))**(-q)
 
+##Need to fix q-dependence here...
 def Lo1(M, *, spin=0, **kwargs):
 	return eta(spin)*mdot(to1(M), M, 1.2)*cgs.c**2.0
 
@@ -100,6 +116,23 @@ def tedd(M, q, *, spin=0, **kwargs):
 def to(M, q, *, spin=0, **kwargs):
 	return max(tedd(M, q, spin=spin, **kwargs), to1(M))
 
+# @np.vectorize
+# def spec_disk2(M, mdot1, nu, *, spin=0, **kwargs):
+# 	rin=risco(spin)*rg(M)
+# 	rout=2.0*rt(M)
+# 	x=1.36
+# 	teff_in=(3.*cgs.G*mdot1*M/(8.0*np.pi*x**3.0*rin**3.0)*(1.0-1.0/x**0.5)/cgs.sigma_sb)**(0.25)
+# 	nu_br2=cgs.kb*teff_in/(1.0e3*cgs.eV)
+# 	nu_br1=cgs.kb*teff_in*(rout/rin)**(-0.75)/(1.0e3*cgs.eV)
+# 	norm=nu_br1/3. + nu_br2*(nu_br2/nu_br1)**(1./3.) + (3*nu_br1*(-1 + (nu_br2/nu_br1)**(4./3.)))/4.
+
+# 	if nu<nu_br1:
+# 		return (nu/nu_br1)**2.0/norm
+# 	elif nu>nu_br2:
+# 		return (nu_br2/nu_br1)**(1./3.)*np.exp(-(nu-nu_br2)/nu_br2)/norm
+# 	else: 
+# 		return (nu/nu_br1)**(1./3.)/norm
+
 @np.vectorize
 def spec_disk(M, mdot1, nu, *, spin=0, **kwargs):
 	rin=risco(spin)*rg(M)
@@ -108,12 +141,12 @@ def spec_disk(M, mdot1, nu, *, spin=0, **kwargs):
 	teff_in=(3.*cgs.G*mdot1*M/(8.0*np.pi*x**3.0*rin**3.0)*(1.0-1.0/x**0.5)/cgs.sigma_sb)**(0.25)
 	nu_br2=cgs.kb*teff_in/(1.0e3*cgs.eV)
 	nu_br1=cgs.kb*teff_in*(rout/rin)**(-0.75)/(1.0e3*cgs.eV)
-	norm=nu_br1/3. + nu_br2*(nu_br2/nu_br1)**(1./3.) + (3*nu_br1*(-1 + (nu_br2/nu_br1)**(4./3.)))/4.
+	norm=nu_br1/3. + (3*nu_br1*(-1 + (nu_br2/nu_br1)**(4./3.)))/4. + 5.0*nu_br2*(nu_br2/nu_br1)**(1./3.)
 
 	if nu<nu_br1:
 		return (nu/nu_br1)**2.0/norm
 	elif nu>nu_br2:
-		return (nu_br2/nu_br1)**(1./3.)*np.exp(-(nu-nu_br2)/nu_br2)/norm
+		return (nu_br2/nu_br1)**(1./3.)*(nu/nu_br2)**2.0*np.exp(-(nu-nu_br2)/nu_br2)/norm
 	else: 
 		return (nu/nu_br1)**(1./3.)/norm
 
@@ -160,16 +193,41 @@ def Ntot(M, q, *, spin=0, **kwargs):
 # print(zlim(1.0e5*cgs.M_sun, 1.2), zlim(1.0e5*cgs.M_sun, 1.2, spin=0.95), zlim(1.0e5*cgs.M_sun, 1.2, spin=-0.95))
 # print(eta(0.95), eta(-0.95))
 
+mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
+dat=[Ntot(mm, 1.2) for mm in mords]
+np.savetxt("spin_0_dat_new.csv", np.transpose([mords, dat]))
 
-# Mbh=1.0e6*cgs.M_sun
-# mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
-# dat=[Ntot(mm, 1.2) for mm in mords]
-# np.savetxt("spin_0_dat.csv", np.transpose([mords, dat]))
+mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
+dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
+np.savetxt("spin_0.95_dat_new.csv", np.transpose([mords, dat]))
 
-# mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
-# dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
-# np.savetxt("spin_0.95_dat.csv", np.transpose([mords, dat]))
-
-mords=10.**np.arange(5, np.log10(Mhill(-0.95)/cgs.M_sun), 0.05)*cgs.M_sun
+##Had numerical difficulties with larger SMBHs
+mords=10.**np.arange(5, 6.84, 0.05)*cgs.M_sun
 dat=[Ntot(mm, 1.2, spin=-0.95) for mm in mords]
-np.savetxt("spin_-0.95_dat.csv", np.transpose([mords, dat]))
+np.savetxt("spin_-0.95_dat_new.csv", np.transpose([mords, dat]))
+
+
+# qq=1.2
+# aa=0.
+# t=6.0*cgs.year
+# ss=lambda nu: spec_disk(Mbh, mdot(t, Mbh, qq), nu, spin=aa)
+# ss2=lambda nu: spec_disk(Mbh, mdot(t, Mbh, qq), nu, spin=0.998)
+# nu_ords=np.logspace(-3, 3, 100)
+
+
+# fig,ax=plt.subplots(figsize=(10,9))
+# ax.set_ylim(1e-8, 1e3)
+# ax.set_xlim(1e-3, 1)
+# ax.set_ylabel(r'$L_{\rm \nu}$')
+# ax.set_xlabel('E [keV]')
+# l1,=ax.loglog(nu_ords, ss(nu_ords), label='a=0')
+# l2,=ax.loglog(nu_ords, ss2(nu_ords), label='a=0.998')
+# ax.annotate(r't=8.4 yr, $\int L_{\nu} d\nu=1$', (0.1,100))
+# labelLine.labelLines([l1, l2])
+# # print(log_integral(nu_ords[0], nu_ords[-1], nu_ords, ss(nu_ords)))
+# # print(log_integral(nu_ords[0], nu_ords[-1], nu_ords, ss2(nu_ords)))
+
+
+# fig.savefig('tmp.pdf')
+# print(to(Mbh, qq, spin=aa)/cgs.year)
+# print(Lo(Mbh, spin=aa)*(t/to(Mbh, qq, spin=aa))**-qq*bol_correct(ss, 0.3, 7))
