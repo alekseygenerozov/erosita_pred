@@ -7,6 +7,7 @@ from scipy.optimize import newton, brentq
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import labelLine
+from astropy.io import fits
 
 # print(mpl.matplotlib_fname())
 
@@ -14,13 +15,12 @@ hnu_min_ros=0.2
 hnu_max_ros=2.0
 ms=cgs.M_sun
 
-##Double check dh and flim
+##flim should not be a fixed number--It depends on the spectrum 
 dh=3.0/0.7*1e9*cgs.pc
 flim=1.06e-12
 omega_m=0.3
 omega_l=0.7
-
-#--------------------------------------------------------------------------------------------------_#
+=#--------------------------------------------------------------------------------------------------_#
 ##Shankar mass function
 phi_dat=ascii.read("/home/aleksey/Documents/Papers/Shankar/shankar_mass_func.txt")
 phi_dat=phi_dat[phi_dat['z']==0.02]
@@ -162,6 +162,13 @@ def bol_correct(spec, nu_min, nu_max):
 	int1=log_integral(nu_min, nu_max, nu_ords, spec(nu_ords))	
 
 	return int1
+
+# def flim(ss)
+# 	'''	
+# 	Limiting flux that could be detected by eROSITA.
+# 	'''
+	
+
 
 def zlim(M, q, *, spin=0, **kwargs):
 	##Should be to below???
