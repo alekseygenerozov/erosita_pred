@@ -41,13 +41,14 @@ ords2=0.5*(dat2['ENERG_LO']+dat['ENERG_HI'])
 e_resp=IUS(ords, 5.0*dat['SPECRESP']+2.0*dat2['SPECRESP'])
 #--------------------------------------------------------------------------------------------------_#
 abs_dat=np.genfromtxt('/home/aleksey/software/heasoft-6.26/abs2.csv')
-abs_dat=IUS(np.log10(abs_dat[:,0]), np.log10(abs_dat[:,1]))
+abs_dat=IUS(abs_dat[:,0], abs_dat[:,1])
+t_integration=240.
 #--------------------------------------------------------------------------------------------------_#
 def abs1(en):
 	'''
 	Absorption as a function of energy 
 	'''
-	return 10.**abs_dat(np.log10(en))
+	return abs_dat(en)
 
 def rs(M):
 	#return rinterp(M/cgs.M_sun)*cgs.R_sun
@@ -126,7 +127,7 @@ def to(M, q, *, spin=0, **kwargs):
 
 def flim(ss):
 	nu_ords=np.linspace(hnu_min_ros, hnu_max_ros, 500)
-	return 40.*1.0e3*cgs.eV/IUS(nu_ords, ss(nu_ords)*e_resp(nu_ords)*abs1(nu_ords)/nu_ords).integral(nu_ords[0], nu_ords[-1])
+	return 40.*1.0e3*cgs.eV/IUS(nu_ords, ss(nu_ords)*e_resp(nu_ords)*abs1(nu_ords)/nu_ords).integral(nu_ords[0], nu_ords[-1])/t_integration
 
 # @np.vectorize
 # def spec_disk2(M, mdot1, nu, *, spin=0, **kwargs):
