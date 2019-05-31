@@ -17,10 +17,10 @@ ms=cgs.M_sun
 
 ##flim should not be a fixed number--It depends on the spectrum 
 dh=3.0/0.7*1e9*cgs.pc
-flim=1.06e-12
+# flim=1.06e-12
 omega_m=0.3
 omega_l=0.7
-=#--------------------------------------------------------------------------------------------------_#
+#--------------------------------------------------------------------------------------------------_#
 ##Shankar mass function
 phi_dat=ascii.read("/home/aleksey/Documents/Papers/Shankar/shankar_mass_func.txt")
 phi_dat=phi_dat[phi_dat['z']==0.02]
@@ -40,6 +40,14 @@ dat2=ff2[1].data
 ords2=0.5*(dat2['ENERG_LO']+dat['ENERG_HI'])
 e_resp=IUS(ords, 5.0*dat['SPECRESP']+2.0*dat2['SPECRESP'])
 #--------------------------------------------------------------------------------------------------_#
+abs_dat=np.genfromtxt('/home/aleksey/software/heasoft-6.26/abs2.csv')
+abs_dat=IUS(np.log10(abs_dat[:,0]), np.log10(abs_dat[:,1]))
+#--------------------------------------------------------------------------------------------------_#
+def abs1(en):
+	'''
+	Absorption as a function of energy 
+	'''
+	10.**abs_dat(np.log10(en))
 
 def rs(M):
 	#return rinterp(M/cgs.M_sun)*cgs.R_sun
@@ -116,6 +124,10 @@ def tedd(M, q, *, spin=0, **kwargs):
 def to(M, q, *, spin=0, **kwargs):
 	return max(tedd(M, q, spin=spin, **kwargs), to1(M))
 
+def flim(ss):
+	nu_ords=np.linspace(hnu_min_ros, hnu_max_ros, 500)
+	return 40.*cgs.keV/IUS(nu_ords, ss(nu_ords)*e_resp(nu_ords)*abs1(nu_ords)/nu_ords).integral(nu_ords[0], nu_ords[-1])
+
 # @np.vectorize
 # def spec_disk2(M, mdot1, nu, *, spin=0, **kwargs):
 # 	rin=risco(spin)*rg(M)
@@ -152,8 +164,8 @@ def spec_disk(M, mdot1, nu, *, spin=0, **kwargs):
 
 def K(z, spec):
 	nu_ords=np.linspace(hnu_min_ros, hnu_max_ros, 500)
-	int1=IUS(nu_ords, spec(nu_ords*(1+z))*e_resp(nu_ords)).integral(nu_ords[0], nu_ords[-1])
-	int2=IUS(nu_ords, spec(nu_ords)*e_resp(nu_ords)).integral(nu_ords[0], nu_ords[-1])
+	int1=IUS(nu_ords, spec(nu_ords*(1+z))*abs1(nu_ords)*e_resp(nu_ords)/nu_ords).integral(nu_ords[0], nu_ords[-1])
+	int2=IUS(nu_ords, spec(nu_ords)*abs1(nu_ords)*e_resp(nu_ords)/nu_ords).integral(nu_ords[0], nu_ords[-1])
 	# print(int1,spec(nu_ords)*e_resp(nu_ords))
 	return ((1.0+z)*int1/int2)**(-1.0)
 
@@ -163,22 +175,18 @@ def bol_correct(spec, nu_min, nu_max):
 
 	return int1
 
-# def flim(ss)
-# 	'''	
-# 	Limiting flux that could be detected by eROSITA.
-# 	'''
-	
-
 
 def zlim(M, q, *, spin=0, **kwargs):
 	##Should be to below???
 	ss=lambda nu: spec_disk(M, mdot(to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs)
-	return newton(lambda z1:(1.0+z1)**2.0*J(z1)**2.0*K(z1, ss)-Lo(M)*bol_correct(ss, hnu_min_ros, hnu_max_ros)/4.0/np.pi/dh**2.0/flim, 0.2)
+	flim1=flim(ss)
+	return newton(lambda z1:(1.0+z1)**2.0*J(z1)**2.0*K(z1, ss)-Lo(M)/4.0/np.pi/dh**2.0/flim1, 0.2)
 
 def tend(M, q, z, *, spin=0, **kwargs):
 	tt=to(M, q, spin=spin, **kwargs)
-	return brentq(lambda tx: (Lo(M, spin=spin, **kwargs)*bol_correct(lambda nu: spec_disk(M, mdot(tx*to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs), hnu_min_ros, hnu_max_ros)/\
-		(4.0*np.pi*dh**2.0*K(z, lambda nu: spec_disk(M, mdot(tx*to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs))*flim*(1+z)**2.*J(z)**2.0))\
+	return brentq(lambda tx: (Lo(M, spin=spin, **kwargs)/\
+		(4.0*np.pi*dh**2.0*K(z, lambda nu: spec_disk(M, mdot(tx*to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs))\
+			*flim(lambda nu: spec_disk(M, mdot(tx*to(M, q, spin=spin, **kwargs), M, q), nu, spin=spin, **kwargs))*(1+z)**2.*J(z)**2.0))\
 	**(1.0/q)-tx, 1, 1000)*tt
 
 def ndot_tde(M):
@@ -195,9 +203,13 @@ def Ntot(M, q, *, spin=0, **kwargs):
 
 
 # zords=np.linspace(0, 0.25, 100)
-# Mbh=1.0e6*cgs.M_sun
-# print(bol_correct(lambda nu1: spec_disk( Mbh, mdot(to1(Mbh), Mbh, 1.2), nu1), hnu_min_ros, hnu_max_ros))
-# print(zlim(1.0e5*cgs.M_sun, 1.2), zlim(1.0e5*cgs.M_sun, 1.2, spin=0.95), zlim(1.0e5*cgs.M_sun, 1.2, spin=-0.95))
+Mbh=1.0e6*cgs.M_sun
+qq=1.2
+aa=0.
+t=cgs.year
+ss=lambda nu: spec_disk(Mbh, mdot(t, Mbh, qq), nu, spin=aa)
+print(flim(ss)/1.0e-12)
+print(zlim(1.0e6*cgs.M_sun, 1.2), zlim(1.0e6*cgs.M_sun, 1.2, spin=0.95), zlim(1.0e6*cgs.M_sun, 1.2, spin=-0.95))
 # print(eta(0.95), eta(-0.95))
 
 mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
