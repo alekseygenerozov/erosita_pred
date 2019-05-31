@@ -47,7 +47,7 @@ def abs1(en):
 	'''
 	Absorption as a function of energy 
 	'''
-	10.**abs_dat(np.log10(en))
+	return 10.**abs_dat(np.log10(en))
 
 def rs(M):
 	#return rinterp(M/cgs.M_sun)*cgs.R_sun
@@ -126,7 +126,7 @@ def to(M, q, *, spin=0, **kwargs):
 
 def flim(ss):
 	nu_ords=np.linspace(hnu_min_ros, hnu_max_ros, 500)
-	return 40.*cgs.keV/IUS(nu_ords, ss(nu_ords)*e_resp(nu_ords)*abs1(nu_ords)/nu_ords).integral(nu_ords[0], nu_ords[-1])
+	return 40.*1.0e3*cgs.eV/IUS(nu_ords, ss(nu_ords)*e_resp(nu_ords)*abs1(nu_ords)/nu_ords).integral(nu_ords[0], nu_ords[-1])
 
 # @np.vectorize
 # def spec_disk2(M, mdot1, nu, *, spin=0, **kwargs):
