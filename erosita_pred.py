@@ -153,7 +153,7 @@ def spec_disk(M, mdot1, nu, *, spin=0, **kwargs):
 	x=1.36
 	teff_in=(3.*cgs.G*mdot1*M/(8.0*np.pi*x**3.0*rin**3.0)*(1.0-1.0/x**0.5)/cgs.sigma_sb)**(0.25)
 	nu_br2=cgs.kb*teff_in/(1.0e3*cgs.eV)
-	nu_br1=cgs.kb*teff_in*(rout/rin)**(-0.75)/(1.0e3*cgs.eV)
+	nu_br1=cgs.kb*teff_in*(rout/x/rin)**(-0.75)*(1.0-(1/x)**0.5)**(0.25)/(1.0-(rin/rout)**0.5)**0.25/(1.0e3*cgs.eV)
 	norm=nu_br1/3. + (3*nu_br1*(-1 + (nu_br2/nu_br1)**(4./3.)))/4. + 5.0*nu_br2*(nu_br2/nu_br1)**(1./3.)
 
 	if nu<nu_br1:
