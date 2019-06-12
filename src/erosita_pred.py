@@ -22,7 +22,7 @@ omega_m=0.3
 omega_l=0.7
 #--------------------------------------------------------------------------------------------------_#
 ##Shankar mass function
-loc=os.path.dirname(__file__)+'../dat'
+loc=os.path.dirname(__file__)+'/../dat/'
 phi_dat=ascii.read(loc+"shankar_mass_func.txt")
 phi_dat=phi_dat[phi_dat['z']==0.02]
 phi_interp=IUS(phi_dat['logM'],  phi_dat['logP'])
