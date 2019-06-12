@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import labelLine
 from astropy.io import fits
+import os
 
 
 hnu_min_ros=0.2
@@ -184,19 +185,23 @@ def Ntot(M, q, *, spin=0, **kwargs):
 	absc=[ndot_tde(M)*ttot(M, q, zz, spin=spin, **kwargs)*dVc(zz) for zz in zords]
 	return IUS(zords, absc).integral(zords[0], zords[-1])
 
+def Ngrid(M, q, *, spin=0, **kwargs):
+	zlim11=zlim(M, q, spin=spin, **kwargs)
+	zords=np.arange(0.01*zlim11, 0.99*zlim11, (zlim11-0.01*zlim11)/20.)
+	absc=[1.0e-5*cgs.year**-1*ttot(M, q, zz, spin=spin, **kwargs)*dVc(zz) for zz in zords]
+	return IUS(zords, absc).integral(zords[0], zords[-1])
 
+# mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
+# dat=[Ntot(mm, 1.2) for mm in mords]
+# np.savetxt("spin_0_dat_new.csv", np.transpose([mords, dat]))
 
-mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
-dat=[Ntot(mm, 1.2) for mm in mords]
-np.savetxt("spin_0_dat_new.csv", np.transpose([mords, dat]))
+# mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
+# dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
+# np.savetxt("spin_0.95_dat_new.csv", np.transpose([mords, dat]))
 
-mords=10.**np.arange(5, np.log10(Mhill(0.95)/cgs.M_sun), 0.05)*cgs.M_sun
-dat=[Ntot(mm, 1.2, spin=0.95) for mm in mords]
-np.savetxt("spin_0.95_dat_new.csv", np.transpose([mords, dat]))
-
-##Had numerical difficulties with larger SMBHs
-mords=10.**np.arange(5, np.log10(Mhill(-0.95)/cgs.M_sun), 0.05)*cgs.M_sun
-dat=[Ntot(mm, 1.2, spin=-0.95) for mm in mords]
-np.savetxt("spin_-0.95_dat_new.csv", np.transpose([mords, dat]))
+# ##Had numerical difficulties with larger SMBHs
+# mords=10.**np.arange(5, np.log10(Mhill(-0.95)/cgs.M_sun), 0.05)*cgs.M_sun
+# dat=[Ntot(mm, 1.2, spin=-0.95) for mm in mords]
+# np.savetxt("spin_-0.95_dat_new.csv", np.transpose([mords, dat]))
 
 
