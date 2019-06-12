@@ -188,7 +188,7 @@ def Ntot(M, q, *, spin=0, **kwargs):
 def Ngrid(M, q, *, spin=0, **kwargs):
 	zlim11=zlim(M, q, spin=spin, **kwargs)
 	zords=np.arange(0.01*zlim11, 0.99*zlim11, (zlim11-0.01*zlim11)/20.)
-	absc=[1.0e-5*cgs.year**-1*ttot(M, q, zz, spin=spin, **kwargs)*dVc(zz) for zz in zords]
+	absc=[1.0e-5*cgs.year**-1/(1.0e6*cgs.pc)**3.*ttot(M, q, zz, spin=spin, **kwargs)*dVc(zz) for zz in zords]
 	return IUS(zords, absc).integral(zords[0], zords[-1])
 
 # mords=10.**np.arange(5, np.log10(Mhill(0)/cgs.M_sun), 0.05)*cgs.M_sun
